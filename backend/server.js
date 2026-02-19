@@ -15,7 +15,16 @@ connectCloudinary()
 
 // middlewares
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+  origin: [
+    'health-bridge-mern-mdnd.vercel.app',
+    // 'https://your-admin-app.vercel.app',
+    'http://localhost:5173', // For local development
+    'http://localhost:5174'  // If admin runs on different port
+  ],
+  credentials: true
+}))
+
 
 // api endpoints
 app.use("/api/user", userRouter)
