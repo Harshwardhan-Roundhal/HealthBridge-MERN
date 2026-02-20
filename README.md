@@ -1,409 +1,170 @@
-# HealthBridge - Vercel Deployment Guide
+# HealthBridge
 
-This guide will help you deploy all three parts of the HealthBridge application (Admin, Frontend, and Backend) on Vercel.
+HealthBridge is a full-stack doctor appointment platform built with the MERN ecosystem.
+It includes:
+- a patient-facing web app (`frontend`)
+- an admin/doctor dashboard (`admin`)
+- a REST API backend (`backend`)
 
-## 📋 Table of Contents
+## Tech Stack
 
-- [Prerequisites](#prerequisites)
-- [Project Structure](#project-structure)
-- [Environment Variables Setup](#environment-variables-setup)
-- [Deployment Steps](#deployment-steps)
-  - [Backend Deployment](#1-backend-deployment)
-  - [Frontend Deployment](#2-frontend-deployment)
-  - [Admin Deployment](#3-admin-deployment)
-- [Post-Deployment Configuration](#post-deployment-configuration)
-- [Troubleshooting](#troubleshooting)
-
----
-
-## Prerequisites
-
-Before deploying, ensure you have:
-
-1. **Vercel Account**: Sign up at [vercel.com](https://vercel.com)
-2. **Vercel CLI** (optional but recommended):
-   ```bash
-   npm install -g vercel
-   ```
-3. **GitHub/GitLab/Bitbucket Account**: For connecting repositories
-4. **Environment Variables**: MongoDB URI, Cloudinary credentials, JWT secrets, etc.
-
----
+- Frontend: React, Vite, Tailwind CSS, Axios, React Router
+- Admin Panel: React, Vite, Tailwind CSS, Axios, React Router
+- Backend: Node.js, Express.js, MongoDB (Mongoose), JWT
+- Media and Payments: Cloudinary, Razorpay, Stripe
+- Deployment: Vercel
 
 ## Project Structure
 
-```
+```text
 HealthBridge/
-├── admin/          # React Admin Panel (Vite)
-├── frontend/       # React Frontend App (Vite)
-└── backend/        # Node.js/Express Backend API
+  admin/       # Admin + doctor dashboard
+  backend/     # Express API + MongoDB
+  frontend/    # Patient-facing app
 ```
 
----
+## Core Features
 
-## Environment Variables Setup
+- User registration/login and profile management
+- Browse doctors and book appointments
+- Appointment cancellation and history
+- Doctor dashboard for appointments and profile updates
+- Admin dashboard for doctors, appointments, and analytics
+- Online payments (Razorpay and Stripe)
 
-### Backend Environment Variables
+## API Base URL
 
-Create a `.env` file in the `backend/` directory with the following variables:
+- Local: `http://localhost:4000`
+- Production: `https://<your-backend>.vercel.app`
+
+## Main API Routes
+
+### User Routes (`/api/user`)
+
+- `POST /register`
+- `POST /login`
+- `GET /get-profile` (protected: `token` header)
+- `POST /update-profile` (protected: `token`)
+- `POST /book-appointment` (protected: `token`)
+- `GET /appointments` (protected: `token`)
+- `POST /cancel-appointment` (protected: `token`)
+- `POST /payment-razorpay` (protected: `token`)
+- `POST /verifyRazorpay` (protected: `token`)
+- `POST /payment-stripe` (protected: `token`)
+- `POST /verifyStripe` (protected: `token`)
+
+### Doctor Routes (`/api/doctor`)
+
+- `POST /login`
+- `GET /list` (public)
+- `POST /cancel-appointment` (protected: `dtoken` header)
+- `GET /appointments` (protected: `dtoken`)
+- `POST /change-availability` (protected: `dtoken`)
+- `POST /complete-appointment` (protected: `dtoken`)
+- `GET /dashboard` (protected: `dtoken`)
+- `GET /profile` (protected: `dtoken`)
+- `POST /update-profile` (protected: `dtoken`)
+
+### Admin Routes (`/api/admin`)
+
+- `POST /login`
+- `POST /add-doctor` (protected: `atoken` header)
+- `GET /appointments` (protected: `atoken`)
+- `POST /cancel-appointment` (protected: `atoken`)
+- `GET /all-doctors` (protected: `atoken`)
+- `POST /change-availability` (protected: `atoken`)
+- `GET /dashboard` (protected: `atoken`)
+
+## Environment Variables
+
+Create a `.env` file in each app as needed.
+
+### `backend/.env`
 
 ```env
-# MongoDB Connection
-MONGODB_URI=your_mongodb_atlas_connection_string
+PORT=4000
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
 
-# JWT Secrets
-JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRES_IN=7d
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=your_admin_password
 
-# Cloudinary Configuration
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_NAME=your_cloudinary_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+CLOUDINARY_SECRET_KEY=your_cloudinary_secret_key
 
-# Payment Gateways (Optional)
 RAZORPAY_KEY_ID=your_razorpay_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 STRIPE_SECRET_KEY=your_stripe_secret_key
 
-# Server Port (Vercel will handle this automatically)
-PORT=4000
+CURRENCY=INR
 ```
 
-### Frontend Environment Variables
-
-Create a `.env` file in the `frontend/` directory:
+### `frontend/.env`
 
 ```env
-VITE_API_URL=https://your-backend-app.vercel.app/api
+VITE_BACKEND_URL=http://localhost:4000
+VITE_RAZORPAY_KEY_ID=your_razorpay_key_id
 ```
 
-### Admin Environment Variables
-
-Create a `.env` file in the `admin/` directory:
+### `admin/.env`
 
 ```env
-VITE_API_URL=https://your-backend-app.vercel.app/api
+VITE_BACKEND_URL=http://localhost:4000
+VITE_CURRENCY=INR
 ```
 
----
+## Run Locally
 
-## Deployment Steps
+### 1. Install dependencies
 
-### 1. Backend Deployment
-
-The backend needs to be configured as a serverless function on Vercel.
-
-#### Step 1.1: Create `vercel.json` for Backend
-
-Create a `vercel.json` file in the `backend/` directory:
-
-```json
-{
-  "version": 2,
-  "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "server.js"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
-}
+```bash
+cd backend && npm install
+cd ../frontend && npm install
+cd ../admin && npm install
 ```
 
-#### Step 1.2: Update `server.js` for Vercel
+### 2. Start apps (three terminals)
 
-Ensure your `server.js` exports the Express app for Vercel:
-
-```javascript
-// Your existing server.js should already work, but ensure it exports the app:
-export default app; // or module.exports = app;
-```
-
-**Note**: Since your backend uses ES modules (`"type": "module"`), make sure `server.js` exports the app correctly.
-
-#### Step 1.3: Deploy Backend
-
-**Option A: Using Vercel Dashboard**
-
-1. Go to [vercel.com](https://vercel.com) and sign in
-2. Click **"Add New Project"**
-3. Import your Git repository
-4. Set the **Root Directory** to `backend`
-5. Configure build settings:
-   - **Framework Preset**: Other
-   - **Build Command**: Leave empty (or `npm install`)
-   - **Output Directory**: Leave empty
-   - **Install Command**: `npm install`
-6. Add all environment variables from your `.env` file
-7. Click **"Deploy"**
-
-**Option B: Using Vercel CLI**
-
+Terminal 1:
 ```bash
 cd backend
-vercel login
-vercel
+npm run server
 ```
 
-Follow the prompts:
-- Set up and deploy? **Yes**
-- Which scope? Select your account
-- Link to existing project? **No**
-- Project name? `healthbridge-backend` (or your preferred name)
-- Directory? `./`
-- Override settings? **No**
-
-After deployment, add environment variables:
-
-```bash
-vercel env add MONGODB_URI
-vercel env add JWT_SECRET
-vercel env add CLOUDINARY_CLOUD_NAME
-vercel env add CLOUDINARY_API_KEY
-vercel env add CLOUDINARY_API_SECRET
-# Add all other environment variables
-```
-
-#### Step 1.4: Get Backend URL
-
-After deployment, note your backend URL (e.g., `https://healthbridge-backend.vercel.app`). You'll need this for frontend and admin configurations.
-
----
-
-### 2. Frontend Deployment
-
-#### Step 2.1: Update API URL
-
-Before deploying, update your frontend code to use the backend URL. Check your API configuration files (usually in `src/config/` or `src/utils/`) and ensure they use the environment variable:
-
-```javascript
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
-```
-
-#### Step 2.2: Deploy Frontend
-
-**Option A: Using Vercel Dashboard**
-
-1. Go to [vercel.com](https://vercel.com)
-2. Click **"Add New Project"**
-3. Import your Git repository (same repo as backend)
-4. Set the **Root Directory** to `frontend`
-5. Configure build settings:
-   - **Framework Preset**: Vite
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-   - **Install Command**: `npm install`
-6. Add environment variable:
-   - `VITE_API_URL` = `https://your-backend-app.vercel.app/api`
-7. Click **"Deploy"**
-
-**Option B: Using Vercel CLI**
-
+Terminal 2:
 ```bash
 cd frontend
-vercel
+npm run dev
 ```
 
-Follow the prompts and set:
-- Root Directory: `frontend`
-- Build Command: `npm run build`
-- Output Directory: `dist`
-
-Add environment variable:
-
-```bash
-vercel env add VITE_API_URL
-# Enter: https://your-backend-app.vercel.app/api
-```
-
----
-
-### 3. Admin Deployment
-
-#### Step 3.1: Update API URL
-
-Similar to frontend, ensure your admin panel uses the environment variable for the API URL.
-
-#### Step 3.2: Deploy Admin
-
-**Option A: Using Vercel Dashboard**
-
-1. Go to [vercel.com](https://vercel.com)
-2. Click **"Add New Project"**
-3. Import your Git repository (same repo)
-4. Set the **Root Directory** to `admin`
-5. Configure build settings:
-   - **Framework Preset**: Vite
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-   - **Install Command**: `npm install`
-6. Add environment variable:
-   - `VITE_API_URL` = `https://your-backend-app.vercel.app/api`
-7. Click **"Deploy"**
-
-**Option B: Using Vercel CLI**
-
+Terminal 3:
 ```bash
 cd admin
-vercel
+npm run dev
 ```
 
-Follow the prompts and set:
-- Root Directory: `admin`
-- Build Command: `npm run build`
-- Output Directory: `dist`
+## Deploy on Vercel
 
-Add environment variable:
+- Deploy `backend`, `frontend`, and `admin` as separate Vercel projects.
+- Set environment variables in each Vercel project.
+- In frontend/admin Vercel env, set `VITE_BACKEND_URL` to the deployed backend URL.
+- Ensure backend CORS includes deployed frontend/admin origins (with `https://`).
 
-```bash
-vercel env add VITE_API_URL
-# Enter: https://your-backend-app.vercel.app/api
-```
+## Quick Health Check
 
----
+- Backend root route:
+  - `GET https://<your-backend>.vercel.app/`
+  - Expected response: `API Working`
+- Note: `/api/health` is not defined by default in current backend code.
 
-## Post-Deployment Configuration
+## Common Issues
 
-### 1. Update CORS Settings
+- `EADDRINUSE: 4000`: another process is using port 4000. Stop it or change `PORT`.
+- Atlas connection error on Vercel: allow Vercel access in MongoDB Atlas Network Access and verify `MONGODB_URI`.
+- CORS blocked requests: add exact frontend/admin domains in backend CORS config.
 
-Ensure your backend `server.js` allows requests from your frontend and admin domains:
+## Security Note
 
-```javascript
-app.use(cors({
-  origin: [
-    'https://your-frontend-app.vercel.app',
-    'https://your-admin-app.vercel.app',
-    'http://localhost:5173', // For local development
-    'http://localhost:5174'  // If admin runs on different port
-  ],
-  credentials: true
-}))
-```
-
-### 2. MongoDB Atlas Whitelist
-
-Add your Vercel deployment IPs to MongoDB Atlas:
-1. Go to MongoDB Atlas → Network Access
-2. Click **"Add IP Address"**
-3. Click **"Allow Access from Anywhere"** (or add specific Vercel IPs)
-
-### 3. Cloudinary Settings
-
-Ensure your Cloudinary account allows uploads from your Vercel domain.
-
-### 4. Test Your Deployments
-
-1. **Backend**: Visit `https://your-backend-app.vercel.app/` - Should show "API Working"
-2. **Frontend**: Visit `https://your-frontend-app.vercel.app`
-3. **Admin**: Visit `https://your-admin-app.vercel.app`
-
----
-
-## Troubleshooting
-
-### Backend Issues
-
-**Problem**: Backend returns 404 or doesn't work
-- **Solution**: Ensure `vercel.json` is correctly configured and `server.js` exports the app
-
-**Problem**: Environment variables not working
-- **Solution**: Re-add environment variables in Vercel dashboard and redeploy
-
-**Problem**: MongoDB connection fails
-- **Solution**: Check MongoDB Atlas network access and connection string
-
-### Frontend/Admin Issues
-
-**Problem**: API calls fail with CORS errors
-- **Solution**: Update backend CORS settings to include frontend/admin URLs
-
-**Problem**: Environment variables not available
-- **Solution**: Ensure variables start with `VITE_` prefix and rebuild
-
-**Problem**: Build fails
-- **Solution**: Check build logs in Vercel dashboard for specific errors
-
-### General Issues
-
-**Problem**: Changes not reflecting after deployment
-- **Solution**: Clear Vercel cache and redeploy, or wait a few minutes
-
-**Problem**: Multiple projects in one repository
-- **Solution**: Use Vercel's monorepo support or deploy each as separate projects with different root directories
-
----
-
-## Quick Deploy Commands
-
-### Deploy All Three Projects
-
-```bash
-# Backend
-cd backend && vercel --prod
-
-# Frontend
-cd ../frontend && vercel --prod
-
-# Admin
-cd ../admin && vercel --prod
-```
-
-### Update Environment Variables
-
-```bash
-# Backend
-cd backend
-vercel env pull .env.local
-
-# Frontend
-cd ../frontend
-vercel env pull .env.local
-
-# Admin
-cd ../admin
-vercel env pull .env.local
-```
-
----
-
-## Project URLs
-
-After deployment, you'll have three URLs:
-
-- **Backend API**: `https://healthbridge-backend.vercel.app`
-- **Frontend**: `https://healthbridge-frontend.vercel.app`
-- **Admin Panel**: `https://healthbridge-admin.vercel.app`
-
-Update these URLs in your environment variables and CORS settings accordingly.
-
----
-
-## Additional Resources
-
-- [Vercel Documentation](https://vercel.com/docs)
-- [Vercel CLI Reference](https://vercel.com/docs/cli)
-- [Deploying Express.js on Vercel](https://vercel.com/docs/functions/serverless-functions/runtimes/node-js)
-- [Environment Variables in Vercel](https://vercel.com/docs/environment-variables)
-
----
-
-## Support
-
-If you encounter any issues during deployment, check:
-1. Vercel deployment logs
-2. Browser console for frontend errors
-3. Network tab for API call failures
-4. MongoDB Atlas logs
-5. Cloudinary dashboard for upload issues
-
----
-
-**Happy Deploying! 🚀**
+- Never commit real secrets to GitHub (`.env` values, API keys, DB credentials).
+- Rotate any credentials that were exposed in development history.
